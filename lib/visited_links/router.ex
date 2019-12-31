@@ -43,7 +43,7 @@ defmodule VisitedLinks.Router do
     to = String.to_integer(conn.params["to"])
 
     domains =
-      Repo.query(from, to)
+      Repo.query!(from, to)
       |> Enum.map(& &1.link)
       |> Enum.map(&Helper.extract_domain/1)
       |> Enum.reject(&is_nil/1)

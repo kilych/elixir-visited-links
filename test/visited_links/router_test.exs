@@ -93,8 +93,7 @@ defmodule VisitedLinks.RouterTest do
     from = Helper.Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
     to = Helper.Time.now() - 1000
     conn =
-      :get
-      |> conn("/visited_domains?from=#{from}&to=#{to}")
+      conn(:get, "/visited_domains?from=#{from}&to=#{to}")
       |> Router.call(@opts)
 
     assert conn.state == :sent
@@ -141,8 +140,20 @@ defmodule VisitedLinks.RouterTest do
     from = Helper.Time.now() + 10_000
     to = Helper.Time.now() + 20_000
     conn =
-      :get
-      |> conn("/visited_domains?from=#{from}&to=#{to}")
+      conn(:get, "/visited_domains?from=#{from}&to=#{to}")
+      |> Router.call(@opts)
+
+    assert conn.state == :sent
+    assert conn.status == 200
+    assert conn.resp_body == ~S({"status":"ok","domains":[]})
+  end
+
+  test "queries domains with from greater than to" do
+    from = Helper.Time.erl_to_unix({{1986, 5, 17}, {23, 59, 59}})
+    to = Helper.Time.erl_to_unix({{1986, 5, 15}, {23, 59, 59}})
+
+    conn =
+      conn(:get, "/visited_domains?from=#{from}&to=#{to}")
       |> Router.call(@opts)
 
     assert conn.state == :sent
@@ -152,8 +163,7 @@ defmodule VisitedLinks.RouterTest do
 
   test "returns 404" do
     conn = 
-      :get
-      |> conn("/missing", "")
+      conn(:get, "/missing", "")
       |> Router.call(@opts)
 
     assert conn.state == :sent

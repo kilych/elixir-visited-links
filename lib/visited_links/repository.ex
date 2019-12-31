@@ -8,15 +8,16 @@ defmodule VisitedLinks.Repository do
     Redix.pipeline(:redix, commands)
   end
 
-  def query(from, to) do
+  def query!(from, to) when from > to, do: []
+
+  def query!(from, to) do
     commands =
       make_key_range(from, to)
       |> Enum.map(fn (args) -> make_query_command(args) end)
 
     Redix.pipeline!(:redix, commands)
     |> List.flatten()
-    |> Enum.map(&Poison.decode!/1)
-    |> Enum.map(fn ([time, link]) -> %{time: time, link: link} end)
+    |> Enum.map(&parse_item/1)
   end
 
   def delete_all() do
@@ -26,13 +27,22 @@ defmodule VisitedLinks.Repository do
       |> Enum.chunk_every(chunk_size)
       |> Enum.map(& ["DEL" | &1])
 
-    (commands != []) && Redix.pipeline!(:redix, commands)
+    Redix.pipeline(:redix, commands)
   end
 
-  defp make_insert_command(%{link: link, time: time}) do
+  defp fetch_all_keys(cursor \\ 0, acc \\ []) do
+    result = Redix.command(:redix, ["SCAN", cursor, "MATCH", "#{root_key()}:*"])
+    case result do
+      {:ok, ["0", keys]} -> acc ++ keys
+      {:ok, [cursor, keys]} -> fetch_all_keys(cursor, acc ++ keys)
+      {:error, _} -> acc
+    end
+  end
+
+  defp make_insert_command(%{link: _, time: time} = item) do
     {key_parts, score} = key_parts_and_score(time)
     key = make_key(key_parts)
-    value = Poison.encode!([time,link])
+    value = stringify_item(item)
 
     ["ZADD", key, score, value]
   end
@@ -79,13 +89,12 @@ defmodule VisitedLinks.Repository do
 
   defp make_key(key_parts), do: Enum.join([root_key() | key_parts], ":")
 
-  def fetch_all_keys(cursor \\ 0, acc \\ []) do
-    [cursor, keys] = Redix.command!(:redix, ["SCAN", cursor, "MATCH", "#{root_key()}:*"])
-    case cursor do
-      "0" -> acc ++ keys
-      _ -> fetch_all_keys(cursor, acc ++ keys)
-    end
-  end
-
   defp root_key(), do: Application.get_env(:visited_links, :redis_root_key, "visited_links")
+
+  defp stringify_item(%{time: time, link: link}), do: Poison.encode!([time, link])
+
+  defp parse_item(item) do
+    [time, link] = Poison.decode!(item)
+    %{time: time, link: link}
+  end
 end
