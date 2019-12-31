@@ -1,8 +1,12 @@
 defmodule VisitedLinks.Helper do
-  def extract_domain link do
-    case %URI{host: host, path: path} = URI.parse(link) do
-      %URI{host: nil, path: nil} -> nil
-      %URI{host: nil} -> path |> String.split("/") |> Enum.at(0)
+  def extract_domain(link) when is_binary(link) do
+    case %{host: host, path: path} = URI.parse(link) do
+      %{host: nil, path: nil} -> nil
+      %{host: nil} ->
+        path
+        |> String.trim_leading("/")
+        |> String.split("/")
+        |> Enum.at(0)
       _ -> host
     end 
   end
