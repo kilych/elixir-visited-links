@@ -8,6 +8,6 @@ defmodule VisitedLinks.Helper do
         |> String.split("/")
         |> Enum.at(0)
       _ -> host
-    end 
+    end
   end
 end

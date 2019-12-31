@@ -1,7 +1,7 @@
 defmodule VisitedLinks.Repository do
   alias VisitedLinks.Helper
 
-  def insert_mul(links) do
+  def insert_mul(links) when links != [] do
     commands = links
     |> Enum.map(&make_insert_command/1)
 
@@ -27,7 +27,7 @@ defmodule VisitedLinks.Repository do
       |> Enum.chunk_every(chunk_size)
       |> Enum.map(& ["DEL" | &1])
 
-    Redix.pipeline(:redix, commands)
+    (commands != []) && Redix.pipeline(:redix, commands)
   end
 
   defp fetch_all_keys(cursor \\ 0, acc \\ []) do
