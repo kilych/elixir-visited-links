@@ -1,21 +1,31 @@
-# VisitedLinks
+# Installation and running
 
-**TODO: Add description**
+## Prerequisites
 
-## Installation
+Install [Elixir](https://elixir-lang.org/install.html "Installing Elixir"), [Redis](https://redis.io/download "Download page"), [Docker](https://docs.docker.com/install/ "Docker Engine overview"), [Docker Compose](https://docs.docker.com/compose/install/ "Install Docker Compose").
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `visited_links` to your list of dependencies in `mix.exs`:
+## Install
 
-```elixir
-def deps do
-  [
-    {:visited_links, "~> 0.1.0"}
-  ]
-end
-```
+`$ git clone https://github.com/kilych/elixir-visited-links.git`
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/visited_links](https://hexdocs.pm/visited_links).
+`$ cd elixir-visited-links`
 
+`$ mix deps.get`
+
+`$ mix compile`
+
+## Test
+
+`$  docker-compose up -d`
+
+`$ mix test`
+
+## Run
+
+(Not for a "real" production.)
+
+`$ mix run --no-halt`
+
+Set `MIX_ENV` to prevent `Plug.Debugger` from showing a debugging page:
+
+`$ MIX_ENV=prod mix run --no-halt`
