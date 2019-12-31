@@ -5,7 +5,7 @@ defmodule VisitedLinks.RouterTest do
   alias VisitedLinks.Router
   alias VisitedLinks.Repository, as: Repo
   alias VisitedLinks.Helper, as: Time
-  alias VisitedLinks.Plug.EnsureParams.RequiredParamMissingOrEmptyError
+  alias VisitedLinks.Plug.ValidateParams.{MissingParamError, InvalidParamError}
 
   @opts Router.init([])
 
@@ -37,6 +37,58 @@ defmodule VisitedLinks.RouterTest do
     assert conn.resp_body == ~S({"status":"ok"})
   end
 
+  test "inserts no links" do
+    assert_raise MissingParamError, fn ->
+      body = Poison.encode!(%{foo: "bar"})
+      conn(:post, "/visited_links", body)
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+    end
+
+    assert_received {:plug_conn, :sent}
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Param 'links' is missing."})
+  end
+
+  test "inserts empty list of links" do
+    assert_raise InvalidParamError, fn ->
+      body = Poison.encode!(%{links: []})
+      conn(:post, "/visited_links", body)
+        |> put_req_header("content-type", "application/json")
+        |> Router.call(@opts)
+    end
+
+    assert_received {:plug_conn, :sent}
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Param 'links' is invalid."})
+  end
+
+  test "inserts empty object of links" do
+    assert_raise InvalidParamError, fn ->
+      body = Poison.encode!(%{links: %{}})
+      conn(:post, "/visited_links", body)
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+    end
+
+    assert_received {:plug_conn, :sent}
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Param 'links' is invalid."})
+  end
+
+  test "inserts not list of links" do
+    assert_raise InvalidParamError, fn ->
+      body = Poison.encode!(%{links: "not list"})
+      conn(:post, "/visited_links", body)
+        |> put_req_header("content-type", "application/json")
+        |> Router.call(@opts)
+    end
+
+    assert_received {:plug_conn, :sent}
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Param 'links' is invalid."})
+  end
+
   test "queries domains" do
     from = Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
     to = Time.now() - 1000
@@ -51,7 +103,7 @@ defmodule VisitedLinks.RouterTest do
   end
 
   test "queries domains when required param is missing" do
-    assert_raise RequiredParamMissingOrEmptyError, fn ->
+    assert_raise MissingParamError, fn ->
       from = Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
 
       conn(:get, "/visited_domains?from=#{from}")
@@ -59,23 +111,30 @@ defmodule VisitedLinks.RouterTest do
     end
 
     assert_received {:plug_conn, :sent}
-    assert_received {_ref, {status, _headers, message}}
-
-    assert status == 400
-    assert message == ~S({"status":"Required param 'to' is missing or empty."})
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Param 'to' is missing."})
   end
 
   test "queries domains when required params are empty" do
-    assert_raise RequiredParamMissingOrEmptyError, fn ->
+    assert_raise InvalidParamError, fn ->
       conn(:get, "/visited_domains?from=&to")
       |> Router.call(@opts)
     end
 
     assert_received {:plug_conn, :sent}
-    assert_received {_ref, {status, _headers, message}}
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Params 'from', 'to' are invalid."})
+  end
 
-    assert status == 400
-    assert message == ~S({"status":"Required params 'from', 'to' are missing or empty."})
+  test "queries domains when param of time is not integer" do
+    assert_raise InvalidParamError, fn ->
+      conn(:get, "/visited_domains?from=0&to=foo")
+      |> Router.call(@opts)
+    end
+
+    assert_received {:plug_conn, :sent}
+    assert_received {_ref, {400, _headers, message}}
+    assert message == ~S({"status":"Param 'to' is invalid."})
   end
 
   test "queries domains don't meet the criteria" do

@@ -9,10 +9,20 @@ defmodule VisitedLinks.Router do
 
   alias VisitedLinks.Repository, as: Repo
   alias VisitedLinks.Helper
-  alias VisitedLinks.Plug.EnsureParams
+  alias VisitedLinks.Plug.ValidateParams
 
-  plug Plug.Parsers, parsers: [:json], json_decoder: Poison
-  plug EnsureParams, pathes: ["/visited_domains"], fields: ["from", "to"]
+  plug Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Poison
+
+  plug ValidateParams,
+    pathes: ["/visited_domains"],
+    fields: ["from", "to"],
+    validators: [:is_not_empty, :represents_integer]
+
+  plug ValidateParams,
+    pathes: ["/visited_links"],
+    fields: ["links"],
+    validators: [:is_not_empty, &is_list/1]
+
   plug :match
   plug :dispatch
 
@@ -48,14 +58,14 @@ defmodule VisitedLinks.Router do
     send_resp(conn, 404, message)
   end
 
-  defp handle_errors(conn, %{kind: kind, reason: reason, stack: stack}) do
+  defp handle_errors(conn, %{kind: kind, reason: reason, stack: _stack}) do
     IO.inspect(kind, label: :kind)
     IO.inspect(reason, label: :reason)
-    IO.inspect(stack, label: :stack)
 
     body =
       case reason do
-        %EnsureParams.RequiredParamMissingOrEmptyError{message: message} -> message
+        %ValidateParams.MissingParamError{message: message} -> message
+        %ValidateParams.InvalidParamError{message: message} -> message
         _ -> "Something went wrong."
       end
       |> (& Poison.encode!(%{status: &1})).()
