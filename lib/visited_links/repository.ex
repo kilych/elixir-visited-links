@@ -1,5 +1,5 @@
 defmodule VisitedLinks.Repository do
-  alias VisitedLinks.Helper, as: Time
+  alias VisitedLinks.Helper
 
   def insert_mul(links) do
     commands = links
@@ -67,10 +67,10 @@ defmodule VisitedLinks.Repository do
   end
 
   defp key_parts_and_score(time) do
-    {{year, _, _}, _} = Time.unix_to_erl(time)
+    {{year, _, _}, _} = Helper.Time.unix_to_erl(time)
 
     beginning_of_year = {{year, 1, 1}, {0, 0, 0}}
-    |> Time.erl_to_unix()
+    |> Helper.Time.erl_to_unix()
 
     seconds = time - beginning_of_year
 

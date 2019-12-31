@@ -27,7 +27,7 @@ defmodule VisitedLinks.Router do
   plug :dispatch
 
   post "/visited_links" do
-    time = Helper.now()
+    time = Helper.Time.now()
     links =
       Map.get(conn.body_params, "links", [])
       |> Enum.map(& %{link: &1, time: time})

@@ -4,7 +4,7 @@ defmodule VisitedLinks.RouterTest do
 
   alias VisitedLinks.Router
   alias VisitedLinks.Repository, as: Repo
-  alias VisitedLinks.Helper, as: Time
+  alias VisitedLinks.Helper
   alias VisitedLinks.Plug.ValidateParams.{MissingParamError, InvalidParamError}
 
   @opts Router.init([])
@@ -15,7 +15,7 @@ defmodule VisitedLinks.RouterTest do
     %{link: "mit.edu", time: {{1970, 1, 1}, {0, 0, 0}}},
     %{link: "http://redis.io#fragment", time: {{1900, 5, 16}, {0, 34, 21}}}
   ]
-  |> Enum.map(& %{&1 | time: Time.erl_to_unix(&1[:time])})
+  |> Enum.map(& %{&1 | time: Helper.Time.erl_to_unix(&1[:time])})
 
   setup_all do
     Repo.delete_all()
@@ -90,8 +90,8 @@ defmodule VisitedLinks.RouterTest do
   end
 
   test "queries domains" do
-    from = Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
-    to = Time.now() - 1000
+    from = Helper.Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
+    to = Helper.Time.now() - 1000
     conn =
       :get
       |> conn("/visited_domains?from=#{from}&to=#{to}")
@@ -104,7 +104,7 @@ defmodule VisitedLinks.RouterTest do
 
   test "queries domains when required param is missing" do
     assert_raise MissingParamError, fn ->
-      from = Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
+      from = Helper.Time.erl_to_unix({{1979, 1, 1}, {0, 0, 0}})
 
       conn(:get, "/visited_domains?from=#{from}")
       |> Router.call(@opts)
@@ -138,8 +138,8 @@ defmodule VisitedLinks.RouterTest do
   end
 
   test "queries domains don't meet the criteria" do
-    from = Time.now() + 10_000
-    to = Time.now() + 20_000
+    from = Helper.Time.now() + 10_000
+    to = Helper.Time.now() + 20_000
     conn =
       :get
       |> conn("/visited_domains?from=#{from}&to=#{to}")
